@@ -1,0 +1,118 @@
+int main(int argc, char *argv[]){
+        //The implementation of your decoder should go here.
+
+        //It is recommeded that you implement the bit abstractions in bitsy.c and
+        //utilize them to implement your decoder.
+        //If so, do NOT call read/write here. Instead rely exclusively on
+        //readBit, readByte, writeBit, writeByte, and flushWriteBuffer.
+
+
+        unsigned short bit;
+        unsigned char last[8];
+        unsigned short charbuffer[8];
+        while()
+        {
+                bit = readBit();
+
+                if(bit == 1)
+                {
+                        for(int i = 0, i < 8; i++)
+                        {
+                                charbuffer[i] = readBit();
+                        }
+
+                        unsigned char total;
+
+                        for(int j = 0; j < 8; j++)
+                        {
+                                total = total + (charbuffer[j] * (1 << j));
+                        }
+
+                        writeByte(total);
+
+                        for(int m = 0; m < 7; m++)
+                        {
+                                last[m+ 1] = last[m];
+                        }
+                        last[0] = total;
+                }
+                else if(bit == 0)
+                {
+                        unsigned short secbit = readBit();
+                        if(secbit == 0)
+                        {
+                                unsigned short array[3];
+                                for(int q = 0; q < 3; q++)
+                                {
+                                        array[q] = readBit();
+                                }
+
+                                unsigned short position;
+
+                                for(int n = 0; n < 3; n++)
+                                {
+                                        position = position + (array[n] * (1 << n));
+                                }
+
+                                unsigned char recchar = last[position];
+
+                                writeByte(recchar);
+
+                                for(int m = 0; m < 7; m++)
+                                {
+                                        last[m+ 1] = last[m];
+                                }
+
+                                last[0] = total;
+                        }
+                        else
+                        {
+                                unsigned short posarray[3];
+                                unsigned short countarray[3];
+
+                                for(int r = 0; r < 3; r++)
+                                {
+                                        posarray[r] = readBit();
+                                }
+
+                                for(int w = 0; w < 3; w++)
+                                {
+                                        countarray[w] = readBit();
+                                }
+
+                                unsigned short pos;
+                                unsigned short count;
+
+                                for(int y = 0; y < 3; y++)
+                                {
+                                        pos = pos + (posarray[y] * (1 << y));
+                                }
+
+                                for(int z = 0; z < 3; z++)
+                                {
+                                        count = count + (countarray[z] * (1 << z));
+                                }
+
+                                unsigned char repchar = last[pos];
+
+                                writeByte(repchar);
+
+                                for(int a = 0; a < count; a++)
+                                {
+                                        writeByte(repchar);
+                                }
+
+                                for(int b = 0; b < (8 - count); b++)
+                                {
+                                        last[b+count] = last[b];
+                                }
+
+                                for(int c = 0; c < (8 - count); c++)
+                                {
+                                        last[c] = repchar;
+                                }
+                        }
+
+        return 0; //exit status. success=0, error=-1
+}
+

@@ -1,0 +1,83 @@
+int main(int argc, char *argv[]){
+        //The implementation of your encoder should go here.
+
+        //It is recommeded that you implement the bit abstractions in bitsy.c and
+        //utilize them to implement your encoder.
+        //If so, do NOT call read/write here. Instead rely exclusively on
+        //readBit, readByte, writeBit, writeByte, and flushWriteBuffer.
+        unsigned short ascii;
+        ascii = readByte();
+        unsigned short next;
+        unsigned short writebuf[8];
+        int writeindex = 0;
+        while((ascii != 0)
+        {
+                unsigned short position;
+                for(int i = 0; i < 8; i++)
+                {
+                        if(ascii == array[i])
+                        {
+                                position = i;
+                                next = readByte();
+                                if(next != ascii)                       //recent, nonrepeating encoding here
+                                {
+                                        writeBit( (unsigned char)(0) );
+                                        writeBit( (unsigned char)(0) );
+                                        for(int j = 2; j >= 0; j = j -1)
+                                        {
+                                                writeBit( (unsigned char)((position >> j) & 0x1) );
+                                        }
+                                        for(int l = 0; l < 7; l++)
+                                        {
+                                                array[l+1] = array[l];
+                                        }
+                                        array[0] = ascii;
+                                        ascii = next;
+                                }
+                                else                                    //recent, repeating encoding here
+                                {
+                                        int count = 0;
+                                        while(((next = readByte()) == ascii) & (next != 0))
+                                        {
+                                                count++;
+                                        }
+                                        writeBit( (unsigned char)(0) );
+                                        writeBit( (unsigned char)(1) );
+                                        for(int k = 2; k >= 0; k = k-1)
+                                        {
+                                                writeBit( (unsigned char)((position >> k) & 0x1) );
+                                        }
+                                        for(int n = 2; n >= 0; n=n-1)
+                                        {
+                                                writeBit( (unsigned char)((count >> n) & 0x1) );
+                                        }
+                                        while(count >= 0)
+                                        {
+                                                for(int o = 0; o < 7; o++)
+                                                {
+                                                        array[o+1] = array[o];
+                                                }
+                                                array[0] = ascii;
+                                                count = count -1;
+                                        }
+                                        ascii = next;
+                                }
+                        }
+                        if(i = 8 && ascii != array[7])                  //infrequent encoding here
+                        {
+                                writeBit( (unsigned char)(1) );
+                                writeByte(ascii);
+                                for(int l = 0; l < 7; l++)
+                                {
+                                        array[l+1] = array[l];
+                                }
+                                array[0] = ascii;
+                                ascii = readByte();
+                        }
+                }
+        }
+        if(ascii == 277)                        //EOF handling
+        {
+                return 0; //exit status. success=0, error=-1
+        }
+}

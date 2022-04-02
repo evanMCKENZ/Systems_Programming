@@ -1,0 +1,243 @@
+//Add any includes you require.
+
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/select.h>
+
+/* main - implementation of filter
+ * In this project, you will be developing a filter program that forks
+ * a child and then executes a program passed as an argument and intercepts
+ * all output and input from that program. The syntax for the execution of
+ * the filter program is given by:
+ *
+ *      filter <program name> <arguments to program>
+ *
+ * The following commands must be implemented:
+ *      //           : Pass the character '/' as input to the program.
+ *      /i           : Go to input only mode.
+ *      /o           : Go to input/output mode.
+ *      /c           : Go to command mode.
+ *      /m <integer> : Set the max-text, maximum number of lines to be displayed.
+ *      /k <integer> : Send the child process indicated signal.
+ *
+ * See the spec for details.
+ *
+ * After receiving each command, the program should output a prompt indicating
+ * the current mode and if there is more data to be displayed.
+ * The prompt syntax is :
+ *
+ *      <pid> m <more> #
+ *
+ * where <pid> is the process id of the child process, m is the current mode (
+ * i (input only), c (command), o(input/output)), optional <more> is the text "more"
+ * if there is data available to be displayed, and lastly the pound character.
+ */
+
+#define COMMAND 1
+#define INPUT 2
+#define OUTPUT 3
+#define MAXLINES 20
+
+int mode = COMMAND;
+
+void chgComm()
+{
+        mode = COMMAND;
+}
+
+int main(int argc, char *argv[]){
+        //Hint: use select() to determine when reads may execute without blocking.
+
+        int inPipe[2];
+        int outPipe[2];
+        int errPipe[2];
+
+        pipe(inPipe);
+        pipe(outPipe);
+        pipe(errPipe);
+
+        //child process
+        int cpid = fork();
+        if(cpid == 0)
+        {
+                //pid_t = getpid();
+
+                dup2(inPipe[0], 0);
+                close(inPipe[1]);
+                close(0);
+
+                dup2(outPipe[1], 1);
+                close(outPipe[0]);
+                close(1);
+
+                dup2(errPipe[1], 2);
+                close(errPipe[0]);
+                close(2);
+
+                char argv2[0] = argv[1];
+                for(int i = 1; i < argc; i++)
+                {
+                        argv2[i] = argv[i+1];
+                }
+
+                execvp(argv2[0], argv2);
+
+                exit(0);
+
+        }
+
+        fd_set fdst;
+
+        //pid_t getpid();
+
+        close(inPipe[0]);
+        close(outPipe[1]);
+        close(errPipe[1]);
+
+        while(1)
+        {
+                FD_ZERO(&fdst);
+                switch(mode)
+                {
+                        case COMMAND:
+                                FD_SET(0, &fdst);
+                                FD_SET(errPipe[0], &fdst);
+
+                                int check = select(errPipe[0] + 1, &fdst, NULL, NULL, NULL);
+
+                                if(check > 0)
+                                {
+                                        if(FD_ISSET(0) != 0)
+                                        {
+                                                char slash;
+                                                read(0, slash, 1);
+                                                if(slash == '/')
+                                                {
+                                                        char comm;
+                                                        read(0, comm, 1);
+                                                        switch(comm)
+                                                        {
+                                                                case i:
+                                                                       mode = INPUT;
+                                                                       break;
+                                                                case o:
+                                                                       mode = OUTPUT;
+                                                                       break;
+                                                                case c:
+                                                                       mode = COMMAND;
+                                                                       break;
+                                                                case m:
+                                                                       int newmax;
+                                                                       read(0, newmax, 4);
+                                                                       MAXVALUE = newmax;
+                                                                       break;
+                                                                case k:
+                                                                       int sig;
+                                                                       read(0, sig, 4);
+                                                                       kill(cpid, sig);
+                                                                       break;
+                                                        }
+                                                }
+                                                else
+                                                {
+                                                        printf("invalid command\n");
+                                                }
+                                        }
+                                        else if(FD_ISSET(errPipe[0]) != 0)
+                                        {
+                                                char err;
+                                                while( (read(errPipe[0], &err, 1) != 0))
+                                                {
+                                                        write(2, err, 1);
+                                                }
+                                        }
+                                break;
+                        case INPUT:
+                                FD_SET(0, &fdset);
+                                FD_SET(errPipe[0], &fdst);
+
+                                int check = select(errPipe[0] + 1, &fdst, NULL, NULL, NULL);
+
+                                if(check > 0)
+                                {
+                                        if(FD_ISSET(0) != 0)
+                                        {
+                                                char first;
+                                                read(0, &first, 1);
+                                                if(first == '/')
+                                                {
+                                                        chgComm();
+                                                }
+                                                else
+                                                {
+                                                        char in;
+                                                        while( (read(0, &in, 1)) != 0)
+                                                        {
+                                                                write(inPipe[1], in, 1);
+                                                        }
+                                                }
+                                        }
+                                        else if(FD_ISSET(errPipe[0]) != 0)
+                                        {
+                                                char err;
+                                                while( (read(errPipe[0], &err, 1) != 0))
+                                                {
+                                                        write(2, err, 1);
+                                                }
+                                        }
+                                }
+                                break;
+                        case OUTPUT:
+                                FD_SET(0, &fdst);
+                                FD_SET(outPipe[0], &fdst);
+                                FD_SET(errPipe[0], &fdst);
+
+                                int check = select(errPipe[0] + 1, &fdst, NULL, NULL, NULL);
+
+                                if(check > 0)
+                                {
+                                        if(FD_ISSET(0) != 0)
+                                        {
+                                                char first;
+                                                read(0, &first, 1);
+                                                if(first == '/')
+                                                {
+                                                        chgComm();
+                                                }
+                                                else
+                                                {
+                                                        char in;
+                                                        while( (read(0, &in, 1)) != 0)
+                                                        {
+                                                                write(inPipe[1], in, 1);
+                                                        }
+                                                }
+                                        }
+                                        else if(FD_ISSET(errPipe[0]) != 0)
+                                        {
+                                                char err;
+                                                while( (read(errPipe[0], &err, 1) != 0))
+                                                {
+                                                        write(2, err, 1);
+                                                }
+                                        }
+                                        else if(FD_ISSET(outPipe[0]) != 0)
+                                        {
+                                                char out;
+                                                while( (read(outPipe[0], &out, 1) != 0))
+                                                {
+                                                        write(1, out, 1);
+                                                }
+                                        }
+
+                                break;
+                        default:
+                                printf("invalid mode\n");
+                                exit(0);
+                }
+        }
+        return 0;
+}
+
+
