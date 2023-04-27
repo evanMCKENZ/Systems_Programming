@@ -1,0 +1,19 @@
+Place your compression ratios/comments here.
+
+
+
+When testing the encoding written by myself, I compressed both the czy.c file and the czy file created by running the make czy command
+
+The original file sizes of czy.c and czy are 4826 bytes and 17880 bytes respectively.
+
+The encoded versions of these files very 4187 bytes and 11178 bytes.
+
+Given these values, the compression ratios for these files would be given as (4187/4826) and (11178/17880).
+
+The result of these ratios is 0.8675 and 0.625 respectively.
+
+In comparison, when compressing these same files with gzip, we get sizes of 1820 and 4101 bytes.
+
+Giving us a ratio of (1820/4826) and (4101/17880), or 0.229 and 0.377.
+
+As we can see from these calculations, gzip is much more efficient at compressing our files than our encoder, but our encoder does shrinkl these files by a not insignificant margin.
